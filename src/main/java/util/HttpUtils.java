@@ -4,11 +4,13 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.net.URLConnection;
-@Slf4j
-//模拟一次浏览器的http请求
-public class HttpUtils {
 
+@Slf4j
+
+public class HttpUtils {
+    /**
+     * 获取文件大小
+    * */
     public static long getHttpFileContentLength(String url) {
         HttpURLConnection httpURLConnection= null;
         int contentLength=0;
@@ -42,8 +44,10 @@ public class HttpUtils {
 
 
     }
-    //获取HttpURLConnection链接对象
 
+    /**
+     * 获取HttpURLConnection连接对象
+     * */
     public static HttpURLConnection getHttpURLConnection(String url) throws Exception{
 
         URL url1=new URL(url);

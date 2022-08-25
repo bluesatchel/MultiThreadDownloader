@@ -38,7 +38,12 @@ public class Downloader {
             //创建获取下载信息的任务对象
             downloadInfoThread = new DownloadInfoThread(contentLength);
             //将任务交给线程池,newScheduledThreadPool
-
+            File check = new File(path + ".temp" + 0);
+            if(check.exists()){
+                for (int i = 0; i < Constant.THREAD_NUM; i++) {
+                    DownloadInfoThread.downSize.add(FileUtils.getFileContentLength(path+".temp"+i));
+                }
+            }
             scheduledExecutorService.scheduleAtFixedRate(downloadInfoThread,100,200, TimeUnit.MILLISECONDS);
 
             ArrayList<Future> list=new ArrayList<Future>();
@@ -86,10 +91,12 @@ public class Downloader {
 
         }*/
     }
+    /**
+     * 切分下载
+     * */
     public void spilt(String url, ArrayList<Future> futureList){
 
         //获取下载文件大小
-
         long contentLength=HttpUtils.getHttpFileContentLength(url);
 
         //切分为五块

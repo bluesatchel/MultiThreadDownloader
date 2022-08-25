@@ -38,41 +38,96 @@ public class DownloadTask implements Callable<Boolean> {
         String httpFileName= HttpUtils.getHttpFileName(url);
 
         //分块的文件名
-
+        String originalName=httpFileName+".temp";
+        originalName=Constant.PATH+originalName;
         httpFileName=httpFileName+".temp"+part;
 
         httpFileName= Constant.PATH+httpFileName;
         //获取分块下载的连接
 
-        HttpURLConnection httpURLConnection = HttpUtils.getHttpURLConnection(url, startPos, endPos);
 
+        /**
+         * 在这里实现断点续传功能
+         *
+         * 首先校验temp文件是否存在,如果存在则获取temp文件的大小,然后传递给getHttpURLConnection获取到对应的下载字节范围,然后利用RandomAccessFile类进行续写
+         * */
 
-        try {
-            InputStream inputStream = httpURLConnection.getInputStream();
-            BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
-            RandomAccessFile accessFile=new RandomAccessFile(httpFileName,"rw");
+        File file = new File(httpFileName);
+        if(file.exists()){
 
-            byte[] buffer=new byte[Constant.BYTE_SIZE];
-            int len=-1;
-            while ((len=bufferedInputStream.read(buffer))!=-1){
-                //1秒内下载数据之和
-                //downSize是一个原子类
-                DownloadInfoThread.downSize.add(len);
-                accessFile.write(buffer,0,len);
+            long length = file.length();
+            //只有第0块可以直接用length传入
+            HttpURLConnection httpURLConnection = null;
+            if(part==0){
+                httpURLConnection=HttpUtils.getHttpURLConnection(url, length, endPos);
+
+            }else{
+                httpURLConnection=HttpUtils.getHttpURLConnection(url, startPos+length, endPos);
             }
-            accessFile.close();
-            return true;
+            try {
+                InputStream inputStream = httpURLConnection.getInputStream();
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
 
-        } catch (FileNotFoundException exception) {
-            log.error("下载文件不存在{}",url);
-            return false;
-        }catch (Exception e){
-            log.error("下载出现异常");
-            return false;
-        }finally {
-            httpURLConnection.disconnect();
-            //线程执行完成一次减1
-            countDownLatch.countDown();
+                RandomAccessFile accessFile=new RandomAccessFile(httpFileName,"rw");
+                accessFile.seek(accessFile.length());
+
+                byte[] buffer=new byte[Constant.BYTE_SIZE];
+                int len=-1;
+                while ((len=bufferedInputStream.read(buffer))!=-1){
+                    //1秒内下载数据之和
+                    //downSize是一个原子类
+                    DownloadInfoThread.downSize.add(len);
+                    accessFile.write(buffer,0,len);
+                }
+                accessFile.close();
+                return true;
+
+            } catch (FileNotFoundException exception) {
+                log.error("下载文件不存在{}",url);
+                return false;
+            }catch (Exception e){
+                log.error("下载出现异常");
+                return false;
+            }finally {
+                httpURLConnection.disconnect();
+                //线程执行完成一次减1
+                countDownLatch.countDown();
+            }
+        }else{
+            HttpURLConnection httpURLConnection = HttpUtils.getHttpURLConnection(url, startPos, endPos);
+            try {
+                InputStream inputStream = httpURLConnection.getInputStream();
+                BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream);
+                RandomAccessFile accessFile=new RandomAccessFile(httpFileName,"rw");
+
+                byte[] buffer=new byte[Constant.BYTE_SIZE];
+                int len=-1;
+                while ((len=bufferedInputStream.read(buffer))!=-1){
+                    //1秒内下载数据之和
+                    //downSize是一个原子类
+                    DownloadInfoThread.downSize.add(len);
+                    accessFile.write(buffer,0,len);
+                }
+                accessFile.close();
+                return true;
+
+            } catch (FileNotFoundException exception) {
+                log.error("下载文件不存在{}",url);
+                return false;
+            }catch (Exception e){
+                log.error("下载出现异常");
+                return false;
+            }finally {
+                httpURLConnection.disconnect();
+                //线程执行完成一次减1
+                countDownLatch.countDown();
+            }
+
+
+
+
         }
+
+
     }
 }
